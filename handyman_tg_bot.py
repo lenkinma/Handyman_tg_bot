@@ -1,6 +1,7 @@
 import telebot
 import time
 from telebot import types
+from googletrans import Translator
 
 BOT_TOKEN = '6146451826:AAErL9lZgotF3XcC69rl2QXA7ksSUKI-oUs'  # Токен Телеграм-бота
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -55,29 +56,33 @@ def bot_message(message):
 
     if message.chat.type == 'private':
         if message.text == '💬 Переводчик':
-            markup.add(item_back)
-            bot.send_message(message.chat.id, '💬 Переводчик', reply_markup=markup)
+            markup.add(item_back, item5)
+            bot.send_message(message.chat.id, 'Введите выражение, которое хотите перевести', reply_markup=markup)
             user['state'] = 'translate'
 
         elif message.text == '🔢 Калькулятор':
-            markup.add(item_back)
+            markup.add(item_back, item5)
             bot.send_message(message.chat.id, 'Введите выражение, которое хотите посчитать', reply_markup=markup)
             user['state'] = 'calculate'
 
         elif message.text == '☁ Погода':
-            markup.add(item_back)
+            markup.add(item_back, item5)
             bot.send_message(message.chat.id, '☁ Погода', reply_markup=markup)
             user['state'] = 'weather'
 
         elif message.text == '🐸 Мемы':
-            markup.add(item_back)
+            markup.add(item_back, item5)
             bot.send_message(message.chat.id, '🐸 Мемы', reply_markup=markup)
             user['state'] = 'memes'
 
         elif message.text == 'ℹ Инфо':
-            markup.add(item_back)
-            bot.send_message(message.chat.id, 'ℹ Инфо', reply_markup=markup)
-            user['state'] = 'info'
+            if user['state'] == 'default':
+                bot.send_message(message.chat.id, 'Авторы бота: \n@kuuorti \n@lenkinmax')
+            elif user['state'] == 'calculate':
+                bot.send_message(message.chat.id, 'Введите выражение которое нужно посчитать, и бот выведет результат \n\nВам доступны базовые арифметические операци \n\nВы также можете использовать скобки, если они вам понадобятся')
+            elif user['state'] == 'translate':
+                bot.send_message(message.chat.id, 'Введите выражение которое нужно перевести \n\nВ боте доступно два языка: RU, EN \n\nБот автоматически определит язык и отправит перевод')
+
 
         elif message.text == '🔙 Назад':
             markup.add(item1, item2, item3, item4, item5)
@@ -87,6 +92,27 @@ def bot_message(message):
         else:
             if user['state'] == 'calculate':
                 calculator(message)
+            elif user['state'] == 'translate':
+                translator(message)
+
+
+# переводчик
+def translator(message):
+    translator = Translator()
+
+    # Определение языка ввода.
+    lang = translator.detect(message.text)
+    lang = lang.lang
+
+    # Если ввод по русски, то перевести на английский по умолчанию.
+    if lang == 'ru':
+        send = translator.translate(message.text)
+        bot.send_message(message.chat.id, send.text)
+
+    # Иначе другой язык перевести на русский {dest='ru'}.
+    else:
+        send = translator.translate(message.text, dest='ru')
+        bot.send_message(message.chat.id, send.text)
 
 
 # калькулятор
