@@ -1,3 +1,6 @@
+import math
+
+import requests
 import telebot
 import time
 from telebot import types
@@ -67,7 +70,7 @@ def bot_message(message):
 
         elif message.text == '☁ Погода':
             markup.add(item_back, item5)
-            bot.send_message(message.chat.id, '☁ Погода', reply_markup=markup)
+            bot.send_message(message.chat.id, 'Введите город, в котором хотите узнать погоду', reply_markup=markup)
             user['state'] = 'weather'
 
         elif message.text == '🐸 Мемы':
@@ -79,9 +82,11 @@ def bot_message(message):
             if user['state'] == 'default':
                 bot.send_message(message.chat.id, 'Авторы бота: \n@kuuorti \n@lenkinmax')
             elif user['state'] == 'calculate':
-                bot.send_message(message.chat.id, 'Введите выражение которое нужно посчитать, и бот выведет результат \n\nВам доступны базовые арифметические операци \n\nВы также можете использовать скобки, если они вам понадобятся')
+                bot.send_message(message.chat.id, 'Вам доступны базовые арифметические операци \n\nВы также можете использовать скобки, если они вам понадобятся')
             elif user['state'] == 'translate':
-                bot.send_message(message.chat.id, 'Введите выражение которое нужно перевести \n\nВ боте доступно два языка: RU, EN \n\nБот автоматически определит язык и отправит перевод')
+                bot.send_message(message.chat.id, 'В боте доступно два языка: RU, EN \n\nБот автоматически определит язык и отправит перевод')
+            elif user['state'] == 'weather':
+                bot.send_message(message.chat.id, 'Бот знает погоду во всех городах мира, \n\nНазвания городов нужно вводить с использованием кириллицы')
 
 
         elif message.text == '🔙 Назад':
@@ -94,6 +99,24 @@ def bot_message(message):
                 calculator(message)
             elif user['state'] == 'translate':
                 translator(message)
+            elif user['state'] == 'weather':
+                weather(message)
+
+# погода
+def weather(message):
+    weather_api_key = '54e6869ab9c8a14b92e5ada3bbd43ee6'
+    try:
+        response = requests.get(f"http://api.openweathermap.org/data/2.5/weather?q={message.text}&lang=ru&units=metric&appid={weather_api_key}")
+        data = response.json()
+
+        city = data["name"]
+        cur_temp = data["main"]["temp"]
+        humidity = data["main"]["humidity"]
+        pressure = data["main"]["pressure"]
+        wind = data["wind"]["speed"]
+        bot.send_message(message.chat.id, f"Погода в городе: {city}\nТемпература: {cur_temp}°C\nВлажность: {humidity}%\nДавление: {math.ceil(pressure/1.333)} мм.рт.ст\nВетер: {wind} м/с \nХорошего дня!")
+    except:
+        bot.send_message(message.chat.id, 'Проверьте название города!')
 
 
 # переводчик
