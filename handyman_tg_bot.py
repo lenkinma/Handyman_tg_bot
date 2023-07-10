@@ -1,10 +1,11 @@
 import math
-
+from bs4 import BeautifulSoup
 import requests
 import telebot
 import time
 from telebot import types
 from googletrans import Translator
+import random
 
 BOT_TOKEN = '6146451826:AAErL9lZgotF3XcC69rl2QXA7ksSUKI-oUs'  # Токен Телеграм-бота
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -15,6 +16,17 @@ TIMEOUT_CONNECTION = 5  # Таймаут переподключения
 START_MESSAGE = """Привет, я бот на все руки!"""
 
 bd = [{'user_id': '0', 'state': 'default'}]
+
+
+def make_bd(message):
+    already_have = False
+    for user in bd:
+        if user['user_id'] == message.chat.id:
+            already_have = True
+
+    if not already_have:
+        bd.append({'user_id': message.chat.id, 'state': 'default'})
+    print(bd)
 
 
 # Обработчик сообщений-команд
@@ -31,15 +43,8 @@ def send_start(message):
 
     bot.send_message(message.chat.id, 'Привет! Я бот! Чем тебе помочь?', reply_markup=markup)
 
-    already_have = False
-    for user in bd:
-        if user['user_id'] == message.chat.id:
-            already_have = True
-            user['state'] = 'default'
+    make_bd(message)
 
-    if not already_have:
-        bd.append({'user_id': message.chat.id, 'state': 'default'})
-    print(bd)
 
 
 # Обработчик сообщений
@@ -51,7 +56,11 @@ def bot_message(message):
     item3 = types.KeyboardButton('☁ Погода')
     item4 = types.KeyboardButton('🐸 Мемы')
     item5 = types.KeyboardButton('ℹ Инфо')
+    item6 = types.KeyboardButton('⏰ Мем из 2011')
+    item7 = types.KeyboardButton('💎 IT мем')
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+    make_bd(message)
 
     for i in bd:
         if i['user_id'] == message.chat.id:
@@ -74,9 +83,13 @@ def bot_message(message):
             user['state'] = 'weather'
 
         elif message.text == '🐸 Мемы':
-            markup.add(item_back, item5)
-            bot.send_message(message.chat.id, '🐸 Мемы', reply_markup=markup)
+            markup.add(item_back, item6, item7, item5)
+            bot.send_message(message.chat.id, 'Бот может прислать рандомный мем из двух пабликов в вк на выбор!', reply_markup=markup)
             user['state'] = 'memes'
+        elif message.text == '⏰ Мем из 2011':
+            memes(message, 1)
+        elif message.text == '💎 IT мем':
+            memes(message, 2)
 
         elif message.text == 'ℹ Инфо':
             if user['state'] == 'default':
@@ -86,8 +99,9 @@ def bot_message(message):
             elif user['state'] == 'translate':
                 bot.send_message(message.chat.id, 'В боте доступно два языка: RU, EN \n\nБот автоматически определит язык и отправит перевод')
             elif user['state'] == 'weather':
-                bot.send_message(message.chat.id, 'Бот знает погоду во всех городах мира, \n\nНазвания городов нужно вводить с использованием кириллицы')
-
+                bot.send_message(message.chat.id, 'Бот знает погоду во всех городах мира, \n\nНазвания городов можно вводить с использованием кириллицы')
+            elif user['state'] == 'memes':
+                bot.send_message(message.chat.id, 'Бот умеет скидывать рандомный мем из пабликов ВК \n\n(Если вам выдаст ошибку, то скорее всего это траблы со стороны ВК)')
 
         elif message.text == '🔙 Назад':
             markup.add(item1, item2, item3, item4, item5)
@@ -101,6 +115,34 @@ def bot_message(message):
                 translator(message)
             elif user['state'] == 'weather':
                 weather(message)
+            elif user['state'] == 'memes':
+                memes(message)
+
+
+# мемы
+def memes(message, public):
+    accept = False
+    errors = 0
+    while not accept:
+        random_number = random.randint(0, 2000)
+        if public == 1:
+            public1 = 457263933 - random_number;
+            url = f'https://vk.com/memsfrom2k11?z=photo-132938840_{public1}%2Falbum-132938840_00%2Frev' # для мемов из 2011
+        else:
+            public1 = 457239992 - random_number;
+            url = f'https://vk.com/prog_memes?z=photo-205359325_{public1}' # для IT мемов
+        try:
+            response = requests.get(url)
+            bs = BeautifulSoup(response.text, "lxml")
+            img = bs.find('a', 'PhotoviewPage__photo').find('img').attrs['src']
+            bot.send_photo(message.chat.id, img)
+            accept = True
+        except:
+            errors += 1
+            if errors == 30:
+                accept = True
+                bot.send_message(message.chat.id, 'Что-то пошло не так!\n\nПопробуйте еще раз')
+
 
 # погода
 def weather(message):
